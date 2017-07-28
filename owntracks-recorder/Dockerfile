@@ -1,6 +1,8 @@
 FROM centos:7
-LABEL version="0.1" description="OwnTracks Recorder"
+LABEL version="0.1" description="OwnTracks Recorder with MySQL Storage Backend"
 LABEL authors="Christian Graefe <tmp131127-docker@graefe.net>"
+
+ARG LUAROCKS_VERSION=2.4.2
 
 ENV container docker
 
@@ -20,8 +22,8 @@ COPY recorder-health.sh /usr/local/sbin/recorder-health.sh
 COPY mysql.lua /usr/local/libexec/mysql.lua
 
 # LuaRocks
-ADD http://luarocks.github.io/luarocks/releases/luarocks-2.4.2.tar.gz /usr/local/src/
-RUN cd /usr/local/src && tar -xzf luarocks-2.4.2.tar.gz && cd luarocks-2.4.2 && ./configure && make build && make install
+ADD http://luarocks.github.io/luarocks/releases/luarocks-${LUAROCKS_VERSION}.tar.gz /usr/local/src/
+RUN cd /usr/local/src && tar -xzf luarocks-${LUAROCKS_VERSION}.tar.gz && cd luarocks-${LUAROCKS_VERSION} && ./configure && make build && make install
 RUN luarocks install luasql-mysql MYSQL_INCDIR=/usr/include/mysql MYSQL_LIBDIR=/usr/lib64/mysql && \
     luarocks install dkjson
 
