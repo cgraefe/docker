@@ -1,5 +1,5 @@
 FROM centos:7
-LABEL version="0.1" description="OwnTracks Recorder with MySQL Storage Backend"
+LABEL version="0.2" description="OwnTracks Recorder with MySQL Storage Backend"
 LABEL authors="Christian Graefe <tmp131127-docker@graefe.net>"
 
 ARG LUAROCKS_VERSION=2.4.2
