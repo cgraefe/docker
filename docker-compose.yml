@@ -1,0 +1,157 @@
+version: "2"
+services:
+  sftp:
+    container_name: backup-sftpd
+    image: atmoz/sftp
+    volumes:
+        - /mnt/backup2/ftp/duplicati:/home/duplicati
+        - ./duplicati-sftp/ssh_host_ed25519_key:/etc/ssh/ssh_host_ed25519_key:ro
+        - ./duplicati-sftp/ssh_host_ed25519_key.pub:/etc/ssh/ssh_host_ed25519_key.pub:ro
+        - ./duplicati-sftp/ssh_host_rsa_key:/etc/ssh/ssh_host_rsa_key:ro
+        - ./duplicati-sftp/ssh_host_rsa_key.pub:/etc/ssh/ssh_host_rsa_key.pub:ro
+    ports:
+        - "192.168.5.15:2222:22"
+    command: 'duplicati:$$1$$oOf2Oagf$$UuzqM0TXckelT32fqwBuc0:e:3130:3130'
+  
+  senslog:
+    extends:
+      service: _base
+    build:
+      context: ./SensorLogger
+    image: cgraefe/senslog
+    container_name: senslog
+    restart: unless-stopped
+    environment:
+      - TZ=Europe/Berlin
+      - SENSOR_BROKER=tcp://192.168.5.2:1883
+      - SENSOR_CLIENT_ID=senslog-ineluki
+      - SENSOR_DSN=senslog:eJ8igae2@tcp(192.168.5.2:3306)/senslog?charset=utf8&parseTime=True&loc=Local
+  
+  owntracks:
+    build:
+      context: ./owntracks-recorder
+    image: cgraefe/owntracks-recorder
+    container_name: owntracks
+    restart: unless-stopped
+    environment:
+      - OTR_HOST=192.168.5.2
+      - MYSQL_HOST=192.168.5.2
+      - MYSQL_USER=owntracks
+      - MYSQL_PASSWORD=aishil0G
+    volumes:
+      - /data/mirrored/docker/owntracks:/owntracks
+    ports:
+        - "8083:8083"
+
+  tamatrix:
+    build:
+      context: ./tamatrix
+    image: cgraefe/tamatrix
+    container_name: tamatrix
+    environment:
+      - TAMA_COUNT=3
+    volumes:
+      - /data/mirrored/docker/tamatrix:/tamatrix/data
+    ports:
+        - "8084:80"
+
+  timemachine:
+    image: cptactionhank/netatalk:latest
+    container_name: timemachine
+    restart: unless-stopped
+    environment:
+      - AFP_USER=tm
+      - AFP_PASSWORD=sunrise
+      - AFP_UID=479
+    volumes:
+      - /mirrored/timemachine:/media/share
+      - /etc/afp-docker.conf:/etc/afp.conf
+    ports:
+      - "548:548"
+  vis3:
+    extends:
+      service: _base_centos
+    container_name: vis3
+    build:
+      context: /var/httpd/servers/vis3.graefe.net/docker/
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - /var/httpd/servers/vis3.graefe.net:/var/www
+      - /var/log/httpd:/var/log/httpd
+      - /usr/share/pear:/usr/share/pear:ro
+      - /mnt/Boxee:/mnt/Boxee
+    ports:
+      - "8095:8095"
+
+  openhab:
+    image: "openhab/openhab:2.2.0-amd64-alpine"
+    container_name: openhab
+    restart: always
+    #network_mode: host
+    tty: true
+    volumes:
+      - "/etc/localtime:/etc/localtime:ro"
+      - "/etc/timezone:/etc/timezone:ro"
+      - "/data/mirrored/docker/openhab/addons:/openhab/addons"
+      - "/data/mirrored/docker/openhab/conf:/openhab/conf"
+      - "/data/mirrored/docker/openhab/userdata:/openhab/userdata"
+    environment:
+      OPENHAB_HTTP_PORT: "8080"
+      OPENHAB_HTTPS_PORT: "8443"
+    ports:
+      - "8090:8080"
+      - "8493:8443"
+
+  mycontroller:
+    build:
+      context: ./docker-mycontroller
+    image: cgraefe/mycontroller
+    container_name: mycontroller
+    restart: always
+    volumes:
+      - "/data/mirrored/docker/mycontroller/backup:/usr/local/backup"
+    ports:
+      - "8483:8443"
+
+  homebridge:
+    image: oznu/homebridge
+    container_name: homebridge
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - "TZ=Europe/Berlin"
+      - HOMEBRIDGE_CONFIG_UI=1
+      - HOMEBRIDGE_CONFIG_UI_PORT=8086
+    volumes:
+      - "/data/mirrored/docker/homebridge:/homebridge"
+    ports:
+      - "8086:8086"
+
+
+ 
+  kodi-db:
+    image: mariadb:10.2
+    container_name: kodi-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: twWKVZgs5CES
+    ports:
+      - "3309:3306"
+
+  _base:
+    build:
+      context: .
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "4"
+
+  _base_centos:
+    extends:
+      service: _base
+    privileged: true
+    restart: "no"
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+
