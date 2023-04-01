@@ -1,4 +1,13 @@
 version: "2"
+
+networks:
+  signal-net:
+    external:
+      name: signal-net
+  nodered-net:
+    external:
+      name: nodered-net
+
 services:
   sftp:
     container_name: backup-sftpd
@@ -63,6 +72,7 @@ services:
       - AFP_USER=tm
       - AFP_PASSWORD=sunrise
       - AFP_UID=479
+        #- AVAHI=1
     volumes:
       - /mirrored/timemachine:/media/share
       - /etc/afp-docker.conf:/etc/afp.conf
@@ -128,6 +138,68 @@ services:
     ports:
       - "8086:8086"
 
+  signalapi:
+    image: bbernhard/signal-cli-rest-api
+    container_name: signalapi
+    restart: unless-stopped
+    networks:
+      - signal-net
+    environment:
+      #- MODE=native
+      - MODE=normal
+      #- AUTO_RECEIVE_SCHEDULE=22 * * * * # empty inbox one per hour
+    volumes:
+      - "/data/mirrored/docker/signal:/home/.local/share/signal-cli"
+    #ports:
+    #  - "8087:8080"
+
+  nodered:
+    image: nodered/node-red
+    container_name: nodered
+    restart: unless-stopped
+    user: "1001"
+    networks:
+      - nodered-net
+      - signal-net
+    environment:
+      - TZ=Europe/Berlin
+    volumes:
+      - "/data/mirrored/docker/nodered:/data"
+      - "/etc/pki/tls/private/node-red.graefe.net.key:/etc/node-red.graefe.net.key"
+      - "/etc/pki/tls/certs/node-red.graefe.net.crt:/etc/node-red.graefe.net.crt"
+    ports:
+      - "1880:1880"
+
+  influxdb:
+    image: influxdb:2.4
+    container_name: influxdb
+    restart: unless-stopped
+    networks:
+      - nodered-net
+    environment:
+      - TZ=Europe/Berlin
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=cg
+      - DOCKER_INFLUXDB_INIT_PASSWORD=uer5Biy2is9e
+      - DOCKER_INFLUXDB_INIT_ORG=graefe.net
+      - DOCKER_INFLUXDB_INIT_BUCKET=iot
+    volumes:
+      - "/data/mirrored/docker/influxdb/data:/var/lib/influxdb2"
+      - "/data/mirrored/docker/influxdb/config:/etc/influxdb2"
+    ports:
+      - "8086:8086"
+
+  homeassistant:
+    image: homeassistant/home-assistant:stable
+    container_name: homeassistant
+    restart: unless-stopped
+    environment:
+      - "TZ=Europe/Berlin"
+    volumes:
+      - "/data/mirrored/docker/homeassistant/config:/config"
+    ports:
+      - "8123:8123"
+
 
  
   kodi-db:
@@ -138,6 +210,21 @@ services:
       MYSQL_ROOT_PASSWORD: twWKVZgs5CES
     ports:
       - "3309:3306"
+
+  wiki:
+    image: mediawiki:1.36.4
+    #image: mediawiki:1.32.5
+    #image: mediawiki:1.27.5
+    container_name: wiki
+    restart: always
+    ports:
+      - 127.0.0.1:8089:80
+    #links:
+    #  - mysql
+    volumes:
+      - "/data/mirrored/docker/wiki/images:/var/www/html/images"
+      - "/data/mirrored/docker/wiki/LocalSettings.php:/var/www/html/LocalSettings.php"
+
 
   _base:
     build:
