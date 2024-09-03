@@ -1,4 +1,4 @@
-FROM cgraefe/almalinux-systemd
+FROM cgraefe/alma-systemd
 
 RUN dnf -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm https://rpms.remirepo.net/enterprise/remi-release-8.rpm; \
     dnf -y install dnf-utils; \
