@@ -1,5 +1,6 @@
-FROM cgraefe/alma-systemd
+FROM docker.io/almalinux/8-init:latest
 
+RUN dnf -y update
 RUN dnf -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm https://rpms.remirepo.net/enterprise/remi-release-8.rpm; \
     dnf -y install dnf-utils; \
     dnf config-manager --set-enabled remi
